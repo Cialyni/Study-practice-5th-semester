@@ -25,6 +25,23 @@ services:
     networks:
       - ts-net
 
+  webhook-fastapi:
+    build:
+      context: .
+      dockerfile: Dockerfile.webhook
+    container_name: webhook-fastapi
+    hostname: 'webhook-fastapi'
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - GITLAB_ACCESS_TOKEN=${GITLAB_ACCESS_TOKEN}
+      - GITLAB_BASE_URL=http://gitlab
+    networks:
+      - ts-net
+    depends_on:
+      - gitlab
+
 networks:
   ts-net:
     driver: bridge
