@@ -2,8 +2,8 @@ import requests
 import os
 import sys
 import logging
-import time
 from typing import Optional, Dict, Any
+
 
 class GitLabProjectCreator:
     def __init__(self, base_url: str = None, timeout: int = 30):
@@ -42,8 +42,6 @@ class GitLabProjectCreator:
             return False
 
     def create_project_from_template(self, new_project_name: str, template_project_id: int) -> Optional[Dict[str, Any]]:
-        """Создает проект из шаблона через FORK (работает в GitLab CE)"""
-        
         namespace_id = self._get_user_namespace()
         if not namespace_id:
             logging.error("Could not get user namespace")
@@ -55,10 +53,9 @@ class GitLabProjectCreator:
             "path": new_project_name.lower().replace(" ", "-")
         }
         
-        logging.info(f"Creating project '{new_project_name}' from template ID: {template_project_id}")
+        logging.info(f"Creating project '{new_project_name}' from template id: {template_project_id}")
         
         try:
-            # Используем FORK API
             response = requests.post(
                 f"{self.api_url}/projects/{template_project_id}/fork",
                 headers=self.headers,
@@ -68,22 +65,20 @@ class GitLabProjectCreator:
             
             if response.status_code in [200, 201]:
                 project = response.json()
-                logging.info(f"✅ Project created successfully: {project['web_url']}")
+                logging.info(f"Project created: {project['web_url']}")
                 
-                # Опционально: удаляем связь с оригиналом если нужен независимый проект
-                self._remove_fork_relationship(project['id'])
+                self._remove_fork(project['id'])
                 
                 return project
             else:
-                logging.error(f"❌ Failed to create project: {response.status_code} - {response.text}")
+                logging.error(f"Failed to create project: {response.status_code} - {response.text}")
                 return None
                 
         except requests.exceptions.RequestException as e:
-            logging.error(f"❌ Network error: {e}")
+            logging.error(f"Network error: {e}")
             return None
 
     def _get_user_namespace(self) -> Optional[int]:
-        """Получает namespace ID текущего пользователя"""
         try:
             response = requests.get(
                 f"{self.api_url}/user", 
@@ -96,8 +91,7 @@ class GitLabProjectCreator:
             logging.error(f"Failed to get user info: {e}")
             return None
 
-    def _remove_fork_relationship(self, project_id: int):
-        """Удаляет связь форка (делает проект независимым)"""
+    def _remove_fork(self, project_id: int):
         try:
             response = requests.delete(
                 f"{self.api_url}/projects/{project_id}/fork",
@@ -105,11 +99,11 @@ class GitLabProjectCreator:
                 timeout=self.timeout
             )
             if response.status_code == 204:
-                logging.info("Fork relationship removed - project is now independent")
+                logging.info("Fork removed")
             else:
-                logging.debug(f"Could not remove fork relationship: {response.status_code}")
+                logging.debug(f"Could not remove fork: {response.status_code}")
         except Exception as e:
-            logging.debug(f"Error removing fork relationship: {e}")
+            logging.debug(f"Error removing fork: {e}")
 
 def main():
     logging.basicConfig(
@@ -131,9 +125,9 @@ def main():
     )
 
     if result:
-        logging.info(f"🎉 Project creation completed successfully: {result['web_url']}")
+        logging.info(f"Project creation completed: {result['web_url']}")
     else:
-        logging.error("❌ Project creation failed")
+        logging.error("Project creation failed")
         sys.exit(1)
 
 if __name__ == "__main__":
