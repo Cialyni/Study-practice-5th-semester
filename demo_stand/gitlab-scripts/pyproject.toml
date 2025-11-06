@@ -1,0 +1,8 @@
+[project]
+name = "gitlab-scripts"
+version = "1.0.0"
+dependencies = [
+    "tomlkit",
+    "requests",
+    "pyyaml",
+]

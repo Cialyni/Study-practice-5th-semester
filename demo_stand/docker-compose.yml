@@ -1,0 +1,56 @@
+services:
+  gitlab:
+    image: gitlab/gitlab-ce:latest
+    container_name: gitlab
+    hostname: 'gitlab'
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - gitlab_config:/etc/gitlab
+      - gitlab_logs:/var/log/gitlab
+      - gitlab_data:/var/opt/gitlab
+    networks:
+      - ts-net
+  
+  nexus:
+    image: sonatype/nexus3:latest
+    container_name: nexus
+    hostname: 'nexus'
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    volumes:
+      - nexus_data:/nexus-data
+    networks:
+      - ts-net
+
+  webhook-app:
+    build:
+      context: ./webhook-app
+      dockerfile: Dockerfile
+    container_name: webhook-app
+    hostname: 'webhook-app'
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - GITLAB_ACCESS_TOKEN=${GITLAB_ACCESS_TOKEN}
+      - GITLAB_BASE_URL=http://gitlab
+    networks:
+      - ts-net
+    depends_on:
+      - gitlab
+
+networks:
+  ts-net:
+    driver: bridge
+
+
+volumes:
+  gitlab_config:
+  gitlab_logs:
+  gitlab_data:
+  nexus_data:
+
+
