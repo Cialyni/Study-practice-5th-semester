@@ -51,7 +51,6 @@ class GitLabProjectCreator:
 
     def create_project_from_template(
         self, new_project_name: str, template_project_id: int, group_id: Optional[int] = None) -> Optional[Dict[str, Any]]:
-        print(f"DEBUG: group_id = {group_id}") 
         data = {
             "name": new_project_name,
             "path": new_project_name.lower().replace(" ", "-"),
@@ -63,10 +62,8 @@ class GitLabProjectCreator:
 
         if group_id:
             data["namespace_id"] = group_id
-            print(f"DEBUG: Using namespace_id = {group_id}")
         else:
             namespace_id = self._get_user_namespace()
-            print(f"DEBUG: User namespace_id = {namespace_id}")
             if namespace_id:
                 data["namespace_id"] = namespace_id
 
@@ -129,7 +126,6 @@ class GitLabProjectCreator:
             }
             
             response = requests.post(f"{self.api_url}/groups", headers=self.headers, json=data, timeout=self.timeout)
-            print(response)
             if response.status_code == 201:
                 group = response.json()
                 logging.info(f"Group created: {group['web_url']}. Id: {group['id']}")
