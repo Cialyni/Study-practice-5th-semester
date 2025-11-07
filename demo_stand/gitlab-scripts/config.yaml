@@ -1,5 +1,5 @@
 group_name: "test_group5"
-group_id: 11  # null - create group in local stand. Other - find existance group
+group_id: 9 # null - create group in local stand. Other - find existance group
 template_id: 1
 
 modules:

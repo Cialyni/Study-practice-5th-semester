@@ -39,7 +39,7 @@ def update_toml_dependencies(content: str, dependencies: List[str], project_urls
     deps_array = tomlkit.array()
     for dep in dependencies:
         if dep in project_urls:
-            deps_array.append(f"{dep} @ git+{project_urls[dep]}.git@main")
+            deps_array.append(f"{dep} @ git+{project_urls[dep]}@main")
     
     doc['project']['dependencies'] = deps_array
     
