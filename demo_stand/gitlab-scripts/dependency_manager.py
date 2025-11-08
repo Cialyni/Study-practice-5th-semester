@@ -62,6 +62,47 @@ def update_toml_dependencies(
     return tomlkit.dumps(doc)
 
 
+def get_dependencies_in_group(
+    api_url: str, headers: Dict, timeout: int, group_id: int
+) -> Dict[str, List[str]]:
+    try:
+        dependencies: Dict[str, List[str]] = {}
+        response = requests.get(
+            f"{api_url}/groups/{group_id}/projects",
+            headers=headers,
+            timeout=timeout,
+        )
+        projects_response = response.json()
+        if response.status_code == 200:
+            logging.info(f"get all project in group with id={group_id}")
+            for project in projects_response:
+                project_toml = get_pyproject_toml(
+                    api_url, headers, timeout, project["id"]
+                )
+                if project_toml is None:
+                    logging.warning(
+                        f"pyproject.toml not found in {project['name']} (ID: {project['id']})"
+                    )
+                    dependencies[project["name"]] = []
+                    continue
+                doc = tomlkit.parse(project_toml)
+                project_dependencies = doc.get("project", {}).get("dependencies", [])
+                dependencies[project["name"]] = [
+                    dep.split("@")[0][:-1] for dep in project_dependencies
+                ]
+        else:
+            logging.error(
+                f"Could not get all project in group with id={group_id}: {response.status_code}"
+            )
+            return dependencies
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Network error while fetching group {group_id}: {e}")
+    except Exception as e:
+        logging.error(f"Unexpected error in group {group_id}: {e}")
+
+    return dependencies
+
+
 def commit_changes(
     api_url: str, headers: Dict, timeout: int, project_id: int, updated_content: str
 ):
@@ -90,3 +131,57 @@ def commit_changes(
         logging.error(
             f"Failed to update dependencies for project {project_id}: {response.status_code}"
         )
+
+
+def build_module_map(dependencies: Dict[str, List[str]]) -> str:
+    mermaid_lines = [
+        "graph TD",
+        "classDef root fill:#dcfce7,stroke:#22c55e,color:#166534,stroke-width:2px",
+        "classDef middle fill:#fef3c7,stroke:#f59e0b,color:#92400e,stroke-width:2px",
+        "classDef leaf fill:#fee2e2,stroke:#ef4444,color:#991b1b,stroke-width:3px",
+    ]
+
+    root_modules = [key for key, deps in dependencies.items() if not deps]
+    all_deps = {dep for deps_list in dependencies.values() for dep in deps_list}
+    leaf_modules = set(dependencies.keys()) - all_deps
+
+    for module in sorted(set(dependencies.keys())):
+        if module in root_modules:
+            mermaid_lines.append(f"{module}:::root")
+        elif module in leaf_modules:
+            mermaid_lines.append(f"{module}:::leaf")
+        else:
+            mermaid_lines.append(f"{module}:::middle")
+
+    for module, deps in dependencies.items():
+        for dep in deps:
+            mermaid_lines.append(f"{dep} --> {module}")
+
+    return "\n".join(mermaid_lines)
+
+
+if __name__ == "__main__":
+    print(
+        get_dependencies_in_group(
+            group_id=25,
+            timeout=30,
+            api_url="http://localhost/api/v4",
+            headers={
+                "Authorization": f"Bearer glpat-pimIytXp1Xe5InFb8CA8Sm86MQp1OjEH.01.0w0jl0003",
+                "Content-Type": "application/json",
+            },
+        )
+    )
+    print(
+        build_module_map(
+            get_dependencies_in_group(
+                group_id=25,
+                timeout=30,
+                api_url="http://localhost/api/v4",
+                headers={
+                    "Authorization": f"Bearer glpat-pimIytXp1Xe5InFb8CA8Sm86MQp1OjEH.01.0w0jl0003",
+                    "Content-Type": "application/json",
+                },
+            )
+        )
+    )
