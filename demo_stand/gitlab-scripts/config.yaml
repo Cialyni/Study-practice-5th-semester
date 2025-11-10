@@ -1,5 +1,5 @@
-group_name: "test_group5"
-group_id: 9 # null - create group in local stand. Other - find existance group
+group_name: "test_group1"
+group_id: null # null - create group in local stand. Other - find existance group
 template_id: 1
 
 modules:
@@ -20,5 +20,5 @@ modules:
   - name: module-C
     dependencies:
       - common-module
-      - module-A
+      - module-B
     description: "module-C"
