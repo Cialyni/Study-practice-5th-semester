@@ -25,12 +25,12 @@ services:
     networks:
       - ts-net
 
-  webhook-fastapi:
+  webhook-app:
     build:
-      context: .
-      dockerfile: Dockerfile.webhook
-    container_name: webhook-fastapi
-    hostname: 'webhook-fastapi'
+      context: ./webhook-app
+      dockerfile: Dockerfile
+    container_name: webhook-app
+    hostname: 'webhook-app'
     restart: unless-stopped
     ports:
       - "8000:8000"
