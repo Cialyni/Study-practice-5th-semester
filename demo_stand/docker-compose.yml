@@ -12,6 +12,16 @@ services:
       - gitlab_data:/var/opt/gitlab
     networks:
       - ts-net
+
+  gitlab-runner:
+    image: gitlab/gitlab-runner:latest
+    container_name: gitlab-runner
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - gitlab-runner-config:/etc/gitlab-runner
+    networks:
+      - ts-net
   
   nexus:
     image: sonatype/nexus3:latest
@@ -52,5 +62,6 @@ volumes:
   gitlab_logs:
   gitlab_data:
   nexus_data:
+  gitlab-runner-config:
 
 

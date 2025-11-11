@@ -1,13 +1,11 @@
-from dataclasses import dataclass
-from pathlib import Path
-import requests
-import os
-from dotenv import load_dotenv
 import base64
-import sys
 import logging
-from typing import List, Optional, Dict, Any
+import os
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
+import requests
+from dotenv import load_dotenv
 
 script_path = Path(__file__)
 env_path = script_path.parent.parent.parent / ".env"
@@ -125,9 +123,25 @@ class GitLabAPI:
         )
         return commit
 
+    def create_tag(
+        self, project_id: int, tag_name: str, ref: str = "main", message: str = None
+    ) -> Dict[str, Any]:
+        data = {"tag_name": tag_name, "ref": ref}
+        if message:
+            data["message"] = message
+        tag = self._post(f"/projects/{project_id}/repository/tags", json=data)
+        logging.info(f"Created tag '{tag_name}' in project {project_id} on ref '{ref}'")
+        return tag
+
+    def create_branch(
+        self, project_id: int, branch: str, ref: str = "main"
+    ) -> Dict[str, Any]:
+        data = {"branch": branch, "ref": ref}
+        return self._post(f"/projects/{project_id}/repository/branches", json=data)
+
+    def create_merge_request(self, project_id: int, data: Any) -> Dict[str, Any]:
+        return self._post(f"/projects/{project_id}/merge_requests", json=data)
+
     def remove_fork(self, project_id: int):
-        try:
-            self._delete(f"/projects/{project_id}/fork")
-            logging.info(f"Fork relationship removed for project id={project_id}")
-        except Exception as e:
-            logging.debug(f"Error removing fork for project id={project_id}: {e}")
+        self._delete(f"/projects/{project_id}/fork")
+        logging.info(f"Fork relationship removed for project id={project_id}")
