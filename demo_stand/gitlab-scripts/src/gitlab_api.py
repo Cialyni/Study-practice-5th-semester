@@ -3,7 +3,7 @@ import logging
 import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-
+import socket
 import requests
 from dotenv import load_dotenv
 
@@ -14,7 +14,9 @@ load_dotenv(env_path)
 
 class GitLabAPI:
     def __init__(self, base_url: str = None, timeout: int = 30):
-        self.base_url = base_url or os.getenv("GITLAB_BASE_URL")
+        if base_url is None:
+            base_url = self._detect_gitlab_url()
+        self.base_url = base_url
         self.api_url = f"{self.base_url}/api/v4"
         self.timeout = timeout
         self.token = os.getenv("GITLAB_ACCESS_TOKEN")
@@ -29,6 +31,23 @@ class GitLabAPI:
 
         if not self._check_connection():
             raise ConnectionError("Failed to connect to GitLab")
+
+    def _detect_gitlab_url(self) -> str:
+        if os.path.exists('/.dockerenv'):
+            return os.getenv("GITLAB_INTERNAL_URL", "http://gitlab:80")
+        
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(1)
+            result = sock.connect_ex(('localhost', 8080))
+            sock.close()
+            
+            if result == 0:
+                return os.getenv("GITLAB_EXTERNAL_URL", "http://localhost:8080")
+        except:
+            pass
+        
+        return os.getenv("GITLAB_EXTERNAL_URL", "http://localhost:8080")
 
     def _check_connection(self) -> bool:
         try:

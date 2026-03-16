@@ -5,14 +5,19 @@ services:
     hostname: 'gitlab'
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "8080:80"         
     volumes:
       - gitlab_config:/etc/gitlab
       - gitlab_logs:/var/log/gitlab
       - gitlab_data:/var/opt/gitlab
     networks:
       - ts-net
-
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/-/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s 
   gitlab-runner:
     image: gitlab/gitlab-runner:latest
     container_name: gitlab-runner
@@ -22,40 +27,55 @@ services:
       - gitlab-runner-config:/etc/gitlab-runner
     networks:
       - ts-net
+    depends_on:
+      gitlab:
+        condition: service_healthy
   
   nexus:
     image: sonatype/nexus3:latest
     container_name: nexus
     hostname: 'nexus'
     restart: unless-stopped
+    environment:
+    - NEXUS_SECURITY_RANDOMPASSWORD=false
+    - ADMIN_PASSWORD=admin123               #nexus temporaly password (need to remove in future)
     ports:
       - "8081:8081"
     volumes:
       - nexus_data:/nexus-data
     networks:
       - ts-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/service/rest/v1/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
 
   webhook-app:
     build:
-      context: ./webhook-app
-      dockerfile: Dockerfile
+      context: ./
+      dockerfile: webhook-app/Dockerfile
     container_name: webhook-app
-    hostname: 'webhook-app'
     restart: unless-stopped
     ports:
       - "8000:8000"
     environment:
-      - GITLAB_ACCESS_TOKEN=${GITLAB_ACCESS_TOKEN}
-      - GITLAB_BASE_URL=http://gitlab
+      - GITLAB_BASE_URL=${GITLAB_INTERNAL_URL}
+      - NEXUS_URL=${NEXUS_INTERNAL_URL}
+    env_file:
+      - .env
     networks:
       - ts-net
     depends_on:
-      - gitlab
+      gitlab:
+        condition: service_healthy
+      nexus:
+        condition: service_healthy
 
 networks:
   ts-net:
     driver: bridge
-
 
 volumes:
   gitlab_config:
@@ -63,5 +83,3 @@ volumes:
   gitlab_data:
   nexus_data:
   gitlab-runner-config:
-
-
