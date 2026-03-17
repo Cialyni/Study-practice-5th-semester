@@ -8,15 +8,13 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 
-
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from gitlab_scripts.dependency_manager import DependencyManager
 from pydantic import BaseModel
 
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -57,14 +55,16 @@ class WebhookQueue:
                 try:
                     if self._dm is None:
                         _ = self.dm
-                    
+
                     loop = asyncio.get_event_loop()
                     await loop.run_in_executor(
                         None, self.dm.update_all_direct_dependencies, package_info
                     )
                     logger.info(f"Processed {package_info['package_name']}")
                 except Exception as e:
-                    logger.error(f"Failed to process {package_info.get('package_name')}: {e}")
+                    logger.error(
+                        f"Failed to process {package_info.get('package_name')}: {e}"
+                    )
                 finally:
                     self._queue.task_done()
 
@@ -100,23 +100,23 @@ class NexusWebhook(BaseModel):
 
 def parse_wheel_filename(filename: str) -> Optional[Dict[str, str]]:
     basename = filename.split("/")[-1]
-    if not basename.endswith('.whl'):
+    if not basename.endswith(".whl"):
         return None
-    
-    parts = basename[:-4].split('-')
-    
+
+    parts = basename[:-4].split("-")
+
     for i, part in enumerate(parts):
-        if re.match(r'\d+\.\d+\.\d+', part):
-            name = '-'.join(parts[:i]).replace('_', '-')
+        if re.match(r"\d+\.\d+\.\d+", part):
+            name = "-".join(parts[:i]).replace("_", "-")
             return {"name": name, "version": part}
-    
+
     return None
 
 
 @app.post("/webhook/nexus")
 async def handle_nexus_webhook(payload: NexusWebhook):
     logger.info(f"Webhook received: {payload.action} - {payload.asset.name}")
-    
+
     if payload.action != "CREATED" or not payload.asset.name.endswith(".whl"):
         return {"status": "ignored"}
 
@@ -140,7 +140,7 @@ async def handle_nexus_webhook(payload: NexusWebhook):
 async def queue_status():
     return {
         "queue_size": webhook_queue._queue.qsize(),
-        "is_processing": webhook_queue._processing_lock.locked()
+        "is_processing": webhook_queue._processing_lock.locked(),
     }
 
 
@@ -148,15 +148,16 @@ async def queue_status():
 async def health():
     return {"status": "alive"}
 
+
 @app.post("/reload-token")
 async def reload_token(request: Request):
     data = await request.json()
     new_token = data.get("new_token")
-    
+
     if new_token:
-        os.environ['GITLAB_ACCESS_TOKEN'] = new_token
+        os.environ["GITLAB_ACCESS_TOKEN"] = new_token
         webhook_queue._dm = None
         logger.info(f"Token updated")
         return {"status": "ok"}
-    
+
     return {"status": "error", "message": "No token"}

@@ -36,7 +36,7 @@ class DependencyManager:
             projects = {}
             projects_response = self.api.get_all_projects_from_group(group_id)
             dependencies = self._parse_dependencies_from_response(projects_response)
-            
+
             for proj_response in projects_response:
                 name = proj_response["name"]
                 url = proj_response["http_url_to_repo"]
@@ -50,14 +50,18 @@ class DependencyManager:
             logging.error(f"Failed to load projects from group {group_id}: {e}")
             raise
 
-    def _parse_dependencies_from_response(self, response: List[Dict[str, Any]]) -> Dict[str, List[str]]:
+    def _parse_dependencies_from_response(
+        self, response: List[Dict[str, Any]]
+    ) -> Dict[str, List[str]]:
         dependencies = {}
 
         for project in response:
             project_toml = self.api.get_pyproject_toml(project["id"])
 
             if project_toml is None:
-                logging.warning(f"pyproject.toml not found in {project['name']}, id={project['id']})")
+                logging.warning(
+                    f"pyproject.toml not found in {project['name']}, id={project['id']})"
+                )
                 dependencies[project["name"]] = []
                 continue
 
@@ -84,10 +88,12 @@ class DependencyManager:
 
             doc = tomlkit.parse(current_content)
             correct_name = self._projects[project_id].name
-            
+
             current_name = doc.get("project", {}).get("name", "")
             if current_name != correct_name:
-                logging.info(f"Fixing project name: '{current_name}' -> '{correct_name}'")
+                logging.info(
+                    f"Fixing project name: '{current_name}' -> '{correct_name}'"
+                )
                 doc["project"]["name"] = correct_name
 
             self._projects[project_id].dependencies = dependencies
@@ -138,13 +144,19 @@ class DependencyManager:
     def update_all_direct_dependencies(self, package_info: Dict[str, Any]):
         self._refresh_projects_data()
         depended_projects = self._get_depended_projects_id(package_info["name"])
-        
+
         for proj_id in depended_projects:
-            branch_name = f"auto-update-{package_info['name']}-{package_info['version']}"
+            branch_name = (
+                f"auto-update-{package_info['name']}-{package_info['version']}"
+            )
             self.api.create_branch(proj_id, branch_name, "main")
             content = self.api.get_pyproject_toml(proj_id, branch_name)
-            updated_content = self._update_toml_dependencies(content, package_info["name"], package_info["version"])
-            self._create_commit_for_toml_updation(proj_id, updated_content, branch=branch_name)
+            updated_content = self._update_toml_dependencies(
+                content, package_info["name"], package_info["version"]
+            )
+            self._create_commit_for_toml_updation(
+                proj_id, updated_content, branch=branch_name
+            )
 
             tag_name = f"v{package_info['version']}-mr-auto"
             self.api.create_tag(proj_id, tag_name, branch_name)
@@ -156,20 +168,28 @@ class DependencyManager:
             }
 
             mr_response = self.api.create_merge_request(proj_id, mr_data)
-            logging.info(f"Created MR for {self._projects[proj_id].name}: {mr_response.get('web_url')}")
+            logging.info(
+                f"Created MR for {self._projects[proj_id].name}: {mr_response.get('web_url')}"
+            )
 
-    def _update_toml_dependencies(self, content: str, package_name: str, package_version: str) -> str:
+    def _update_toml_dependencies(
+        self, content: str, package_name: str, package_version: str
+    ) -> str:
         doc = tomlkit.parse(content)
         deps_array = doc["project"]["dependencies"]
         updated_deps_array = tomlkit.array()
-        
+
         for dep in deps_array:
             dep_str = str(dep).strip()
 
             if dep_str.startswith(f"{package_name} @ git+"):
                 updated_dep = f"{package_name}>={package_version}"
-                logging.info(f"Rewrite dependency from GitLab to Nexus: {dep} -> {updated_dep}")
-            elif dep_str.startswith(f"{package_name}>=") or dep_str.startswith(f"{package_name}=="):
+                logging.info(
+                    f"Rewrite dependency from GitLab to Nexus: {dep} -> {updated_dep}"
+                )
+            elif dep_str.startswith(f"{package_name}>=") or dep_str.startswith(
+                f"{package_name}=="
+            ):
                 updated_dep = f"{package_name}>={package_version}"
                 logging.info(f"Nexus version update: {dep} -> {updated_dep}")
             else:
@@ -180,7 +200,13 @@ class DependencyManager:
         doc["project"]["dependencies"] = updated_deps_array
         return tomlkit.dumps(doc)
 
-    def _create_commit_for_toml_updation(self, project_id: int, updated_content: str, commit_message: str = "Update pyproject.toml", branch: str = "main"):
+    def _create_commit_for_toml_updation(
+        self,
+        project_id: int,
+        updated_content: str,
+        commit_message: str = "Update pyproject.toml",
+        branch: str = "main",
+    ):
         commit_data = {
             "branch": branch,
             "commit_message": commit_message,
@@ -223,6 +249,17 @@ class DependencyManager:
                 mermaid_lines.append(f"{dep} --> {module}")
 
         return "\n".join(mermaid_lines)
+
+    def save_module_map_to_root(self, filename="MODULE_MAP.md"):
+        module_map = self.build_module_map()
+        repo_root = Path(__file__).parent.parent.parent
+
+        output_file = repo_root / filename
+
+        with open(output_file, "w", encoding="utf-8") as f:
+            f.write(module_map)
+
+        return output_file
 
 
 if __name__ == "__main__":

@@ -17,15 +17,17 @@ load_dotenv(env_path)
 class GitLabProjectCreator:
     def __init__(self):
         self.user_id = os.getenv("GITLAB_USER_ID")
-        self.group_id = os.getenv("GROUP_ID")  
+        self.group_id = os.getenv("GROUP_ID")
         self.api = GitLabAPI()
 
         if not self.user_id:
             logging.error("GITLAB_USER_ID environment variable is not set")
             sys.exit(1)
-        
+
         if not self.group_id:
-            logging.error("GROUP_ID environment variable is not set. Run TestStandSetup first!")
+            logging.error(
+                "GROUP_ID environment variable is not set. Run TestStandSetup first!"
+            )
             sys.exit(1)
 
     def create_project_from_template(
@@ -37,10 +39,12 @@ class GitLabProjectCreator:
             data = {
                 "name": new_project_name,
                 "path": new_project_name.lower().replace(" ", "-"),
-                "namespace_id": self.group_id, 
+                "namespace_id": self.group_id,
             }
             project = self.api.fork_project(template_project_id, data)
-            logging.info(f"{new_project_name} created from template: {project['web_url']}")
+            logging.info(
+                f"{new_project_name} created from template: {project['web_url']}"
+            )
             self.api.remove_fork(project["id"])
             return project
         except Exception as e:
@@ -86,11 +90,11 @@ class GitLabProjectCreator:
             return
         try:
             dp_manager = DependencyManager(int(self.group_id))
-            
+
             for module_info in modules:
                 if module_info["id"] in dp_manager._projects:
                     dp_manager._projects[module_info["id"]].name = module_info["name"]
-                    
+
             for module_info in modules:
                 dp_manager.init_project_dependencies(
                     module_info["id"],
@@ -98,7 +102,9 @@ class GitLabProjectCreator:
                 )
             logging.info("All dependencies updated")
         except Exception as e:
-            logging.error(f"Failed to update dependencies for modules in group id={self.group_id}: {e}")
+            logging.error(
+                f"Failed to update dependencies for modules in group id={self.group_id}: {e}"
+            )
 
 
 def load_config():
