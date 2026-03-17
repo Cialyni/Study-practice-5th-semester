@@ -1,0 +1,20 @@
+template_id: 1
+modules:
+  - name: common-module
+    dependencies: []
+    description: "common module"
+    
+  - name: module-A
+    dependencies:
+      - common-module
+    description: "module a"
+      
+  - name: module-B
+    dependencies:
+      - common-module
+    description: "module B"
+      
+  - name: module-C
+    dependencies:
+      - module-B
+    description: "module-C"

@@ -1,0 +1,17 @@
+[project]
+name = "gitlab-scripts"
+version = "1.0.0"
+dependencies = [
+    "tomlkit",
+    "requests", 
+    "pyyaml",
+    "python-dotenv",
+]
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["gitlab_scripts*"]

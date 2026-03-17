@@ -1,0 +1,34 @@
+stages:
+  - build
+  - publish
+
+variables:
+  PACKAGE_VERSION: "${CI_COMMIT_TAG}"
+
+before_script:
+  - apt-get update && apt-get install -y sed
+
+build-wheel:
+  image: ghcr.io/astral-sh/uv:0.6.14-python3.12-bookworm
+  stage: build
+  before_script:
+    - export VERSION=${CI_COMMIT_TAG#v}
+    - export VERSION=${VERSION%-mr-auto}
+    - sed -i "s/version = \".*\"/version = \"$VERSION\"/" pyproject.toml
+  script:
+    - uv build --wheel
+  artifacts:
+    paths:
+      - dist/*.whl
+  only:
+    - tags
+
+publish-to-nexus:
+  image: ghcr.io/astral-sh/uv:0.6.14-python3.12-bookworm
+  stage: publish
+  script:
+    - uv publish --publish-url $NEXUS_URL --username $NEXUS_USER --password $NEXUS_PASSWORD dist/*.whl
+  dependencies:
+    - build-wheel
+  only:
+    - tags
