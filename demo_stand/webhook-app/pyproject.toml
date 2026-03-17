@@ -5,8 +5,13 @@ dependencies = [
     "fastapi",
     "uvicorn[standard]",
     "pydantic",
+    "python-dotenv",
+    "gitlab-scripts",
 ]
 
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
+
+[tool.uv.sources]
+gitlab-scripts = { path = "../gitlab-scripts" }

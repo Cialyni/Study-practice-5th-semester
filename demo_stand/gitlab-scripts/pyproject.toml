@@ -7,6 +7,11 @@ dependencies = [
     "pyyaml",
     "python-dotenv",
 ]
+
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["gitlab_scripts*"]
